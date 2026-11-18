@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local kube/other
+*.tmp
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,91 @@
+# deployment.yaml
+# The Deployment is the heart of the project. It declares the DESIRED STATE:
+# "always keep 3 healthy copies of items-api running, built from this image."
+# A Deployment manages a ReplicaSet, which manages the Pods. If a Pod dies,
+# the ReplicaSet makes a new one — that is the self-healing control loop.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: items-api
+  namespace: items-api
+  labels:
+    app: items-api
+spec:
+  replicas: 3                      # desired number of Pods
+
+  selector:
+    matchLabels:
+      app: items-api               # this Deployment manages Pods with this label
+
+  # Rolling-update strategy: never take the whole app down during a deploy.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                   # at most 1 extra Pod while updating
+      maxUnavailable: 0            # never drop below the desired count
+
+  template:                        # the Pod blueprint the ReplicaSet stamps out
+    metadata:
+      labels:
+        app: items-api             # Pods get this label — MUST match the selector above
+    spec:
+      # Security context: run as non-root, no privilege escalation.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: items-api
+          # NOTE: replace with your own image after you build & push it, e.g.
+          #   ghcr.io/halemaa/items-api:1.0.0
+          image: ghcr.io/halemaa/items-api:1.0.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8080
+
+          # Config from the ConfigMap and Secret, injected as env vars.
+          envFrom:
+            - configMapRef:
+                name: items-api-config
+          env:
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: items-api-secret
+                  key: API_TOKEN
+
+          # Resource requests (what the scheduler reserves) and limits (hard cap).
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+
+          # Liveness: if this fails, kubelet RESTARTS the container (self-heal).
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+
+          # Readiness: if this fails, the Service STOPS sending it traffic
+          # (without restarting it). This is what makes rollouts zero-downtime.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+          # Harden the container filesystem.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

@@ -1,0 +1,24 @@
+# hpa.yaml
+# The HorizontalPodAutoscaler watches CPU use and changes the replica count
+# automatically between a floor and ceiling. Load rises -> more Pods; quiet ->
+# fewer. It edits the Deployment's replica count for you.
+# (Requires the metrics-server to be installed in the cluster.)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: items-api
+  namespace: items-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: items-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70   # add Pods when average CPU passes 70%

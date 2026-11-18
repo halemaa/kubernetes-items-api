@@ -1,0 +1,42 @@
+%% Architecture of the items-api on Kubernetes
+%% Render:  mmdc -i architecture.mmd -o architecture.png
+flowchart TB
+    user([Client]):::ext
+    kubectl["kubectl apply -f k8s/"]:::tool
+
+    subgraph CP["Control plane"]
+        api["API server"]:::cp
+        etcd[("etcd<br/>desired state")]:::cp
+        ctrl["controllers<br/>+ scheduler"]:::cp
+    end
+
+    subgraph NS["Namespace: items-api"]
+        svc["Service (ClusterIP)<br/><i>stable address</i>"]:::svc
+        subgraph RS["Deployment -&gt; ReplicaSet (3)"]
+            p1["Pod<br/>items-api"]:::pod
+            p2["Pod<br/>items-api"]:::pod
+            p3["Pod<br/>items-api"]:::pod
+        end
+        cm["ConfigMap"]:::cfg
+        sec["Secret"]:::cfg
+        hpa["HPA 3..10"]:::cfg
+    end
+
+    kubectl --> api
+    api --- etcd
+    api --- ctrl
+    ctrl -->|"creates & heals"| RS
+    user -->|"port 80"| svc
+    svc -->|"label: app=items-api"| p1
+    svc --> p2
+    svc --> p3
+    cm -.->|"env"| RS
+    sec -.->|"env"| RS
+    hpa -.->|"scales"| RS
+
+    classDef cp fill:#4053d6,stroke:#2a3a9c,color:#fff;
+    classDef svc fill:#2e7d6b,stroke:#1f5a4c,color:#fff,font-weight:bold;
+    classDef pod fill:#ec912d,stroke:#b36a10,color:#1a1a1a,font-weight:bold;
+    classDef cfg fill:#7a6fb0,stroke:#574d8a,color:#fff;
+    classDef tool fill:#33455e,stroke:#1f2a3a,color:#fff;
+    classDef ext fill:#f2ede4,stroke:#8a8178,color:#1a1a1a;

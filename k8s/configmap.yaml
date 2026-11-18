@@ -1,0 +1,11 @@
+# configmap.yaml
+# Non-secret configuration, injected into the Pods as environment variables.
+# Change these and re-apply to reconfigure the app WITHOUT rebuilding the image.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: items-api-config
+  namespace: items-api
+data:
+  GREETING: "hello from kubernetes"
+  MAX_ITEMS: "100"

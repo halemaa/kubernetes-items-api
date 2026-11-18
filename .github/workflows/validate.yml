@@ -1,0 +1,45 @@
+# .github/workflows/validate.yml
+# CI for the Kubernetes manifests + the container image.
+#
+#   lint     — validates every manifest against the Kubernetes schemas with
+#              kubeconform. Catches typos and bad fields before they ever reach
+#              a cluster. No cluster or cloud account needed.
+#   docker   — builds the container image to prove the Dockerfile works.
+#
+# This mirrors the Terraform repo's fmt/validate/plan pipeline: fast, free,
+# credential-free checks that run on every push.
+
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint manifests (kubeconform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL -o kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate all manifests
+        run: kubeconform -strict -summary k8s/
+
+  docker:
+    name: Build container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (no push)
+        run: docker build -t items-api:ci .

@@ -1,0 +1,10 @@
+# namespace.yaml
+# A Namespace is a folder inside the cluster that isolates this app's objects
+# from everything else. Keeping a project in its own namespace makes it easy
+# to find, secure, and delete as a unit.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: items-api
+  labels:
+    app: items-api

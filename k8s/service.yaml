@@ -1,0 +1,19 @@
+# service.yaml
+# Pods are disposable and get new IPs when replaced. A Service gives a STABLE
+# address and load-balances across whichever Pods currently match its selector.
+# This is the "receptionist with a fixed phone number" in front of the Pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: items-api
+  namespace: items-api
+  labels:
+    app: items-api
+spec:
+  type: ClusterIP                  # internal-only. See README for NodePort/LoadBalancer.
+  selector:
+    app: items-api                 # routes to Pods wearing this label
+  ports:
+    - name: http
+      port: 80                     # the Service port (what clients call)
+      targetPort: 8080             # the container port (where the app listens)
